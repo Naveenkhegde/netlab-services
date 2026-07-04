@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  netlab-services:
+    build: .
+    container_name: netlab-services
+    restart: unless-stopped
+    # Running in privileged or with host networking can be useful for DHCP broadcasts,
+    # or we can define standard port bindings:
+    ports:
+      - "80:80/tcp"        # Web Control Panel
+      - "53:53/udp"        # DNS
+      - "53:53/tcp"        # DNS
+      - "67:67/udp"        # DHCP (Note: DHCP requires broadcast, host network mode is recommended if used on same subnet)
+      - "389:389/tcp"      # LDAP
+      - "514:514/udp"      # Syslog
+      - "49:49/tcp"        # TACACS+
+      - "1812:1812/udp"    # RADIUS Authentication
+      - "1813:1813/udp"    # RADIUS Accounting
+    volumes:
+      - netlab-config:/etc/netlab
+      - ldap-data:/var/lib/ldap
+    # cap_add is required to allow binding to low ports and running DHCP/DNS raw sockets
+    cap_add:
+      - NET_ADMIN
+
+volumes:
+  netlab-config:
+  ldap-data:

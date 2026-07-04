@@ -1,0 +1,22 @@
+# Python virtual environments
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# Local SQLite databases
+*.db
+netlab.db
+backend/netlab.db
+
+# Large VM binary disk images
+*.qcow2
+*.img
+*.iso
+
+# Temporary and log files
+*.log
+.system_generated/
+*.static
+tmp/

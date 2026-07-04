@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetLab Services Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <div class="brand-name">NetLab Services</div>
+        </div>
+
+        <div class="menu-section">
+            <div class="menu-label">Monitor</div>
+            <ul class="menu-list">
+                <li class="menu-item"><a class="menu-link active" data-target="view-dashboard"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>Dashboard</a></li>
+                <li class="menu-item"><a class="menu-link" data-target="view-syslog"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>Syslog Receiver</a></li>
+            </ul>
+        </div>
+
+        <div class="menu-section">
+            <div class="menu-label">Services</div>
+            <ul class="menu-list">
+                <li class="menu-item"><a class="menu-link" data-target="view-dns"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>DNS Server</a></li>
+                <li class="menu-item"><a class="menu-link" data-target="view-dhcp"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>DHCP Server</a></li>
+                <li class="menu-item"><a class="menu-link" data-target="view-radius"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>RADIUS (AAA)</a></li>
+                <li class="menu-item"><a class="menu-link" data-target="view-tacacs"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>TACACS+ (AAA)</a></li>
+                <li class="menu-item"><a class="menu-link" data-target="view-ldap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>LDAP Directory</a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            <div style="margin-bottom: 8px;">User: <span id="sb-user" style="font-weight: 600; color: #fff;">-</span> (<span id="sb-role" style="font-size: 11px; text-transform: uppercase;">-</span>)</div>
+            <div>IP Address: <span id="sb-ip">Loading...</span></div>
+            <div>Uptime: <span id="sb-uptime">0h 0m</span></div>
+            <button class="btn btn-secondary btn-sm" style="margin-top: 12px; width: 100%;" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <!-- Main Content Panel -->
+    <div class="main-content">
+        <!-- Top Header -->
+        <div class="header">
+            <div class="page-title">
+                <h1 id="page-header-title">Services Dashboard</h1>
+                <p id="page-header-subtitle">Centralized network services panel for GNS3</p>
+            </div>
+            <div class="system-status">
+                <div id="role-badge" class="status-indicator active" style="background: rgba(37, 99, 235, 0.1); color: var(--accent); border: 1px solid rgba(37, 99, 235, 0.2); display: none;">
+                    Admin Mode
+                </div>
+                <div id="connection-status" class="status-indicator active">
+                    <div class="status-dot"></div>
+                    Connected
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. DASHBOARD VIEW -->
+        <div id="view-dashboard" class="view-panel active">
+            <!-- Hardware Stats -->
+            <div class="grid-4">
+                <div class="card stat-card">
+                    <div class="stat-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-cpu">0.0</span>
+                        <span class="stat-label">CPU Load (1m)</span>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-ram">0%</span>
+                        <span class="stat-label">RAM Usage</span>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-disk">0%</span>
+                        <span class="stat-label">Disk Space</span>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-uptime">0m</span>
+                        <span class="stat-label">System Uptime</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Toggles and Log Snippet -->
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">Services Control Panel</div>
+                    
+                    <div class="service-widget">
+                        <div class="service-widget-info">
+                            <span class="service-widget-name">Syslog Server <span id="badge-syslog" class="status-indicator inactive"><div class="status-dot"></div>Inactive</span></span>
+                            <span class="service-widget-desc">Listens for UDP logs on port 514</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-syslog" onchange="toggleService('syslog')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="service-widget">
+                        <div class="service-widget-info">
+                            <span class="service-widget-name">DNS Server <span id="badge-dns" class="status-indicator inactive"><div class="status-dot"></div>Inactive</span></span>
+                            <span class="service-widget-desc">Local name resolution and upstream forwarding</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-dns" onchange="toggleService('dns')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="service-widget">
+                        <div class="service-widget-info">
+                            <span class="service-widget-name">DHCP Server <span id="badge-dhcp" class="status-indicator inactive"><div class="status-dot"></div>Inactive</span></span>
+                            <span class="service-widget-desc">Dynamic IP pool configurations and reservations</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-dhcp" onchange="toggleService('dhcp')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="service-widget">
+                        <div class="service-widget-info">
+                            <span class="service-widget-name">RADIUS (AAA) Server <span id="badge-radius" class="status-indicator inactive"><div class="status-dot"></div>Inactive</span></span>
+                            <span class="service-widget-desc">RADIUS authentication for network access clients</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-radius" onchange="toggleService('radius')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="service-widget">
+                        <div class="service-widget-info">
+                            <span class="service-widget-name">TACACS+ (AAA) Server <span id="badge-tacacs" class="status-indicator inactive"><div class="status-dot"></div>Inactive</span></span>
+                            <span class="service-widget-desc">Admin access and command authorization (priv levels)</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-tacacs" onchange="toggleService('tacacs')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="service-widget">
+                        <div class="service-widget-info">
+                            <span class="service-widget-name">LDAP Server <span id="badge-ldap" class="status-indicator inactive"><div class="status-dot"></div>Inactive</span></span>
+                            <span class="service-widget-desc">Centralized LDAP Directory for corporate login simulation</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-ldap" onchange="toggleService('ldap')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="card" style="display: flex; flex-direction: column;">
+                    <div class="card-title">
+                        <span>Live Syslog Stream</span>
+                        <a onclick="switchTab('view-syslog')" class="btn btn-secondary btn-sm">View All Logs</a>
+                    </div>
+                    <div id="dashboard-syslog" class="console-container" style="flex: 1; height: 100%;">
+                        <div class="console-line"><span class="console-msg">Connecting to syslog database...</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. SYSLOG VIEW -->
+        <div id="view-syslog" class="view-panel">
+            <div class="card">
+                <div class="card-title">
+                    <span>Syslog Viewer</span>
+                    <button class="btn btn-danger btn-sm" onclick="clearLogs('syslog')">Clear All Logs</button>
+                </div>
+                <!-- Filters -->
+                <div class="form-row" style="margin-bottom: 20px;">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="syslog-search">Search Keyword</label>
+                        <input type="text" id="syslog-search" placeholder="Filter by message..." oninput="fetchSyslogs()">
+                    </div>
+                    <div class="form-group">
+                        <label for="syslog-severity">Severity</label>
+                        <select id="syslog-severity" onchange="fetchSyslogs()">
+                            <option value="">All Severities</option>
+                            <option value="0">0 - Emergency</option>
+                            <option value="1">1 - Alert</option>
+                            <option value="2">2 - Critical</option>
+                            <option value="3">3 - Error</option>
+                            <option value="4">4 - Warning</option>
+                            <option value="5">5 - Notice</option>
+                            <option value="6">6 - Informational</option>
+                            <option value="7">7 - Debug</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="syslog-host">Hostname</label>
+                        <select id="syslog-host" onchange="fetchSyslogs()">
+                            <option value="">All Hosts</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="syslog-console" class="console-container" style="height: 480px;">
+                    <div class="console-line"><span class="console-msg">No logs found...</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. DNS VIEW -->
+        <div id="view-dns" class="view-panel">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">Upstream Forwarders</div>
+                    <form id="form-dns-settings" onsubmit="saveDnsSettings(event)">
+                        <div class="form-group">
+                            <label for="dns-upstream">DNS Upstream Servers (Comma-separated)</label>
+                            <input type="text" id="dns-upstream" value="8.8.8.8,1.1.1.1" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Apply Settings</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Add Local DNS A-Record</div>
+                    <form id="form-dns-record" onsubmit="addDnsRecord(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="dns-hostname">Hostname</label>
+                                <input type="text" id="dns-hostname" placeholder="e.g. router.netlab.local" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="dns-ip">IP Address</label>
+                                <input type="text" id="dns-ip" placeholder="e.g. 192.168.1.1" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Record</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Local DNS Zone Records</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Hostname</th>
+                                <th>IP Address</th>
+                                <th>Type</th>
+                                <th style="width: 100px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dns-records-table">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--text-muted);">No local records configured</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. DHCP VIEW -->
+        <div id="view-dhcp" class="view-panel">
+            <div class="card">
+                <div class="card-title">DHCP Scope Settings</div>
+                <form id="form-dhcp-settings" onsubmit="saveDhcpSettings(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dhcp-interface">Listening Interface</label>
+                            <input type="text" id="dhcp-interface" value="eth0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="dhcp-lease">Lease Duration</label>
+                            <input type="text" id="dhcp-lease" value="12h" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dhcp-start">IP Range Start</label>
+                            <input type="text" id="dhcp-start" value="192.168.1.100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="dhcp-end">IP Range End</label>
+                            <input type="text" id="dhcp-end" value="192.168.1.200" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="dhcp-netmask">Subnet Mask</label>
+                            <input type="text" id="dhcp-netmask" value="255.255.255.0" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dhcp-gateway">Default Router (Gateway)</label>
+                            <input type="text" id="dhcp-gateway" value="192.168.1.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="dhcp-dns">DNS Server(s) (Comma-separated)</label>
+                            <input type="text" id="dhcp-dns" value="192.168.1.2" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Apply Settings</button>
+                </form>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">Add Static IP Reservation</div>
+                    <form id="form-dhcp-static" onsubmit="addDhcpStatic(event)">
+                        <div class="form-group">
+                            <label for="dhcp-static-mac">MAC Address</label>
+                            <input type="text" id="dhcp-static-mac" placeholder="e.g. 00:11:22:33:44:55" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="dhcp-static-ip">IP Address</label>
+                                <input type="text" id="dhcp-static-ip" placeholder="e.g. 192.168.1.50" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="dhcp-static-name">Hostname (Optional)</label>
+                                <input type="text" id="dhcp-static-name" placeholder="e.g. switch1">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Lease</button>
+                    </form>
+                </div>
+
+                <div class="card" style="display: flex; flex-direction: column;">
+                    <div class="card-title">Static Lease Reservations</div>
+                    <div class="table-container" style="flex: 1; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>MAC Address</th>
+                                    <th>Reserved IP</th>
+                                    <th>Hostname</th>
+                                    <th style="width: 80px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dhcp-static-table">
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text-muted);">No static leases configured</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Active DHCP Leases</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>MAC Address</th>
+                                <th>Assigned IP</th>
+                                <th>Hostname</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dhcp-leases-table">
+                            <tr>
+                                <td colspan="3" style="text-align: center; color: var(--text-muted);">No active leases database files found or dhcp inactive</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. RADIUS VIEW -->
+        <div id="view-radius" class="view-panel">
+            <div class="grid-2">
+                <!-- Clients -->
+                <div class="card">
+                    <div class="card-title">RADIUS Clients (Network Access Servers)</div>
+                    <form id="form-radius-client" onsubmit="addRadiusClient(event)" style="margin-bottom: 20px;">
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 2;">
+                                <label for="rad-client-ip">IP Address / Subnet</label>
+                                <input type="text" id="rad-client-ip" placeholder="e.g. 192.168.1.0/24 or 192.168.1.1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="rad-client-name">Friendly Name</label>
+                                <input type="text" id="rad-client-name" placeholder="e.g. CoreSwitches">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="rad-client-secret">Shared Secret</label>
+                            <input type="password" id="rad-client-secret" placeholder="e.g. myradsecret" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Add Client</button>
+                    </form>
+                    
+                    <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Client IP/Net</th>
+                                    <th>Name</th>
+                                    <th style="width: 80px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="radius-clients-table">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-muted);">No RADIUS clients configured</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Users -->
+                <div class="card">
+                    <div class="card-title">RADIUS Users (Credentials)</div>
+                    <form id="form-radius-user" onsubmit="addRadiusUser(event)" style="margin-bottom: 20px;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="rad-username">Username</label>
+                                <input type="text" id="rad-username" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="rad-password">Password</label>
+                                <input type="password" id="rad-password" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Add User</button>
+                    </form>
+
+                    <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Password</th>
+                                    <th style="width: 80px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="radius-users-table">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-muted);">No RADIUS users configured</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RADIUS Logs -->
+            <div class="card">
+                <div class="card-title">
+                    <span>RADIUS Authentication Logs</span>
+                    <button class="btn btn-secondary btn-sm" onclick="clearAuthLogs()">Clear Logs</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Service</th>
+                                <th>Username</th>
+                                <th>NAS IP</th>
+                                <th>Status</th>
+                                <th>Message</th>
+                            </tr>
+                        </thead>
+                        <tbody id="radius-logs-table">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-muted);">No authentication records found</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. TACACS+ VIEW -->
+        <div id="view-tacacs" class="view-panel">
+            <div class="grid-2">
+                <!-- Clients -->
+                <div class="card">
+                    <div class="card-title">TACACS+ Clients (NAS)</div>
+                    <form id="form-tacacs-client" onsubmit="addTacacsClient(event)" style="margin-bottom: 20px;">
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 2;">
+                                <label for="tac-client-ip">IP Address / Subnet</label>
+                                <input type="text" id="tac-client-ip" placeholder="e.g. 192.168.1.0/24 or 192.168.1.1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="tac-client-name">Friendly Name</label>
+                                <input type="text" id="tac-client-name" placeholder="e.g. Routers">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="tac-client-secret">Shared Secret</label>
+                            <input type="password" id="tac-client-secret" placeholder="e.g. mytacsecret" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Add Client</button>
+                    </form>
+                    
+                    <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Client IP/Net</th>
+                                    <th>Name</th>
+                                    <th style="width: 80px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tacacs-clients-table">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-muted);">No TACACS+ clients configured</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Users -->
+                <div class="card">
+                    <div class="card-title">TACACS+ Users & Privilege Levels</div>
+                    <form id="form-tacacs-user" onsubmit="addTacacsUser(event)" style="margin-bottom: 20px;">
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 2;">
+                                <label for="tac-username">Username</label>
+                                <input type="text" id="tac-username" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="tac-privilege">Privilege Level</label>
+                                <select id="tac-privilege" required>
+                                    <option value="15" selected>15 - Super Admin (Read/Write)</option>
+                                    <option value="7">7 - Operator (Read-Only/Limited)</option>
+                                    <option value="1">1 - Read Only (Console Access)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="tac-password">Password</label>
+                            <input type="password" id="tac-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Add User</button>
+                    </form>
+
+                    <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Password</th>
+                                    <th>Privilege</th>
+                                    <th style="width: 80px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tacacs-users-table">
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text-muted);">No TACACS+ users configured</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Instructions on configuring Cisco/Juniper client -->
+            <div class="card">
+                <div class="card-title">Cisco IOS Configuration Guide</div>
+                <div class="console-container" style="height: auto; font-family: inherit; font-size: 14px; background: rgba(5, 7, 13, 0.4); border-color: rgba(37, 99, 235, 0.15); line-height: 1.6;">
+                    <p style="margin-bottom: 10px; font-weight: bold; color: var(--accent-hover);">Copy/Paste to your GNS3 Cisco IOS device console to authenticate via this server:</p>
+                    <pre style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #cbd5e1; background: #000; padding: 12px; border-radius: 8px; overflow-x: auto; margin-bottom: 15px;">
+! Define TACACS+ server
+tacacs-server host <span class="server-ip-placeholder">192.168.1.2</span> key <span class="tacacs-secret-placeholder">tacsecret</span>
+
+! Enable AAA authentication
+aaa new-model
+aaa authentication login default group tacacs+ local
+aaa authorization exec default group tacacs+ local
+aaa accounting exec default start-stop group tacacs+
+</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. LDAP VIEW -->
+        <div id="view-ldap" class="view-panel">
+            <div class="card">
+                <div class="card-title">OpenLDAP Directory Settings</div>
+                <form id="form-ldap-settings" onsubmit="saveLdapSettings(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ldap-port">LDAP Port</label>
+                            <input type="text" id="ldap-port" value="389" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="ldap-base">Base DN (DIT Root)</label>
+                            <input type="text" id="ldap-base" value="dc=netlab,dc=local" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ldap-root">Root Manager DN (RootDN)</label>
+                            <input type="text" id="ldap-root" value="cn=admin,dc=netlab,dc=local" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="ldap-root-password">Root Manager Password (RootPW)</label>
+                            <input type="password" id="ldap-root-password" value="adminpassword" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save & Apply Config</button>
+                </form>
+            </div>
+
+            <div class="grid-2">
+                <!-- User manager -->
+                <div class="card">
+                    <div class="card-title">Add Directory User</div>
+                    <form id="form-ldap-user" onsubmit="addLdapUser(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="ldap-user-name">Username (cn)</label>
+                                <input type="text" id="ldap-user-name" placeholder="e.g. john.doe" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="ldap-user-password">Password</label>
+                                <input type="password" id="ldap-user-password" placeholder="e.g. password123" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="ldap-user-fname">First Name</label>
+                                <input type="text" id="ldap-user-fname" placeholder="e.g. John">
+                            </div>
+                            <div class="form-group">
+                                <label for="ldap-user-lname">Last Name</label>
+                                <input type="text" id="ldap-user-lname" placeholder="e.g. Doe">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="ldap-user-email">Email Address</label>
+                            <input type="email" id="ldap-user-email" placeholder="e.g. john@netlab.local">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Add to ou=users</button>
+                    </form>
+                </div>
+
+                <!-- Group manager -->
+                <div class="card">
+                    <div class="card-title">Directory Groups (groupOfNames)</div>
+                    <form id="form-ldap-group" onsubmit="addLdapGroup(event)" style="margin-bottom: 20px;">
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 2;">
+                                <label for="ldap-group-name">Group Name (cn)</label>
+                                <input type="text" id="ldap-group-name" placeholder="e.g. NetworkAdmins" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="ldap-group-desc">Description</label>
+                                <input type="text" id="ldap-group-desc" placeholder="e.g. Switch config permissions">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Add to ou=groups</button>
+                    </form>
+
+                    <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Group Name</th>
+                                    <th>Members</th>
+                                    <th style="width: 120px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ldap-groups-table">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-muted);">No groups defined</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LDAP Directory Tree explorer -->
+            <div class="card">
+                <div class="card-title">Directory tree explorer (ou=users)</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Distinguished Name (DN)</th>
+                                <th>Email</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th style="width: 80px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ldap-users-table">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text-muted);">No LDAP users in ou=users container</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Members Dialog Modal -->
+    <div class="modal-overlay" id="modal-members">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title">Manage Group Members: <span id="modal-group-title">Group</span></div>
+                <button class="modal-close" onclick="closeMembersModal()">&times;</button>
+            </div>
+            <div id="modal-members-body">
+                <p style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">Select the users who belong to this group:</p>
+                <div id="modal-members-list" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 10px; background: var(--bg-primary); border-radius: 8px; border: 1px solid var(--glass-border);">
+                    <!-- User checkboxes will go here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeMembersModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveGroupMembers()">Save Members</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Page Overlay -->
+    <div class="modal-overlay" id="login-overlay" style="display: flex; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-primary); z-index: 9999; align-items: center; justify-content: center;">
+        <div class="card" style="width: 100%; max-width: 400px; padding: 32px; border: 1px solid var(--glass-border); box-shadow: var(--card-shadow); background: var(--bg-secondary);">
+            <div style="text-align: center; margin-bottom: 28px;">
+                <div class="brand-icon" style="margin: 0 auto 12px; width: 44px; height: 44px; font-size: 24px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </div>
+                <h2 style="font-weight: 700; margin-bottom: 4px; font-size: 22px;">NetLab Services</h2>
+                <p style="color: var(--text-secondary); font-size: 13px;">Centralized Services Control Panel</p>
+            </div>
+            
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" required placeholder="admin or viewer">
+                </div>
+                <div class="form-group" style="margin-bottom: 24px;">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required placeholder="default: netlab">
+                </div>
+                <div id="login-error" style="color: var(--danger); font-size: 13px; margin-bottom: 16px; display: none; text-align: center; font-weight: 500;">
+                    Invalid username or password
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+            </form>
+            <div style="margin-top: 24px; text-align: center; font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+                Default credentials:<br>
+                <strong>admin</strong> / <strong>netlab</strong> (Read & Write)<br>
+                <strong>viewer</strong> / <strong>netlab</strong> (Read Only)
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
