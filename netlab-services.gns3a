@@ -1,6 +1,6 @@
 {
     "name": "NetLab Services",
-    "category": "end_device",
+    "category": "guest",
     "description": "All-in-One central network services VM (DNS, DHCP, RADIUS, TACACS+, LDAP, NTP, Syslog, TFTP, and FTP) based on Alpine Linux with a web management UI.",
     "vendor_name": "NetLab",
     "vendor_url": "https://github.com/netlab-services",
