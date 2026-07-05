@@ -192,7 +192,8 @@ function switchTab(targetId) {
         "view-dhcp": { t: "DHCP Server Pools", s: "Subnet scope configs and address reservations" },
         "view-radius": { t: "RADIUS Authentication", s: "Remote AAA authentication configuration" },
         "view-tacacs": { t: "TACACS+ Administration", s: "Command authorization and management access control" },
-        "view-ldap": { t: "LDAP Directory Tree", s: "Centralized network directory management" }
+        "view-ldap": { t: "LDAP Directory Tree", s: "Centralized network directory management" },
+        "view-ntp": { t: "NTP Time Synchronization", s: "Network Time Protocol daemon management" }
     };
 
     if (titleMap[targetId]) {
@@ -206,6 +207,7 @@ function switchTab(targetId) {
     if (targetId === "view-radius") fetchRadius();
     if (targetId === "view-tacacs") fetchTacacs();
     if (targetId === "view-ldap") fetchLdap();
+    if (targetId === "view-ntp") fetchNtp();
 }
 
 // --- Status & Statistics Polling ---
@@ -893,6 +895,78 @@ async function saveGroupMembers() {
     }
 }
 
+// --- NTP Functions ---
+async function fetchNtp() {
+    try {
+        const res = await fetch("/api/ntp");
+        const data = await res.json();
+
+        document.getElementById("ntp-pools").value = data.pools;
+
+        // Render Tracking Stats
+        const syncEl = document.getElementById("ntp-tracking-sync");
+        if (data.stats.synchronized) {
+            syncEl.textContent = "Synchronized";
+            syncEl.style.color = "var(--success)";
+        } else {
+            syncEl.textContent = "Unsynchronized";
+            syncEl.style.color = "var(--danger)";
+        }
+
+        document.getElementById("ntp-tracking-stratum").textContent = data.stats.stratum;
+        document.getElementById("ntp-tracking-ref").textContent = data.stats.reference_id;
+
+        // Render Upstream Sources Table
+        const sourcesTbody = document.getElementById("ntp-sources-table");
+        if (data.stats.sources.length === 0) {
+            sourcesTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No upstream sources found or NTP is disabled</td></tr>';
+        } else {
+            sourcesTbody.innerHTML = data.stats.sources.map(src => {
+                let stateSymbol = src.state;
+                let stateColor = "var(--text-secondary)";
+                if (src.state === "*") {
+                    stateSymbol = "✔"; // current best
+                    stateColor = "var(--success)";
+                } else if (src.state === "+") {
+                    stateSymbol = "✚"; // candidate
+                    stateColor = "var(--accent)";
+                } else if (src.state === "?") {
+                    stateSymbol = "❔"; // unreachable
+                    stateColor = "var(--danger)";
+                }
+                return `
+                    <tr>
+                        <td style="text-align: center; color: ${stateColor}; font-weight: bold;">${stateSymbol}</td>
+                        <td>${escapeHtml(src.name)}</td>
+                        <td style="text-align: center;">${escapeHtml(src.stratum)}</td>
+                        <td style="text-align: center;">${escapeHtml(src.last_rx)}</td>
+                    </tr>
+                `;
+            }).join("");
+        }
+    } catch (err) {
+        console.error("Error loading NTP details:", err);
+    }
+}
+
+async function saveNtpSettings(e) {
+    e.preventDefault();
+    const pools = document.getElementById("ntp-pools").value.trim();
+    const enabled = document.getElementById("toggle-ntp").checked;
+
+    const res = await fetch("/api/ntp/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled, pools })
+    });
+    if (res.ok) {
+        alert("NTP settings saved successfully.");
+        fetchNtp();
+    } else {
+        const err = await res.json();
+        alert(err.detail || "Failed to update NTP settings.");
+    }
+}
 
 // --- AAA Auth Logs Helper ---
 async function fetchAuthLogs() {

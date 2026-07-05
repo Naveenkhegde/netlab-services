@@ -22,6 +22,7 @@ from services.radius_server import RadiusServerManager
 from services.dns_dhcp import DnsmasqManager
 from services.tacacs import TacacsManager
 from services.ldap import LdapManager
+from services.ntp import NtpManager
 
 app = FastAPI(title="NetLab Services Control Panel API", version="1.0.0")
 
@@ -31,6 +32,7 @@ radius_srv = RadiusServerManager(DB_PATH, os.path.join(os.path.dirname(DB_PATH),
 dnsmasq_mgr = DnsmasqManager(DB_PATH, "/etc/netlab/dnsmasq.conf", "/var/lib/misc/dnsmasq.leases")
 tacacs_mgr = TacacsManager(DB_PATH, "/etc/netlab/tac_plus.conf")
 ldap_mgr = LdapManager(DB_PATH, "/etc/netlab/slapd.conf", "/var/lib/ldap")
+ntp_mgr = NtpManager(DB_PATH)
 
 # --- Startup Event ---
 @app.on_event("startup")
@@ -57,6 +59,9 @@ def startup_event():
         
     if get_setting("ldap_enabled") == "true":
         ldap_mgr.start()
+        
+    if get_setting("ntp_enabled") == "true":
+        ntp_mgr.start()
 
 # --- Shutdown Event ---
 @app.on_event("shutdown")
@@ -67,6 +72,7 @@ def shutdown_event():
     dnsmasq_mgr.stop()
     tacacs_mgr.stop()
     ldap_mgr.stop()
+    ntp_mgr.stop()
 
 def verify_admin(x_user_role: str = Header(default="viewer")):
     if x_user_role != "admin":
@@ -157,6 +163,10 @@ class LdapGroupModel(BaseModel):
 
 class LdapGroupMembersModel(BaseModel):
     usernames: List[str]
+
+class NtpSettingsModel(BaseModel):
+    enabled: bool
+    pools: str
 
 # --- Helper Functions ---
 def get_system_stats():
@@ -294,6 +304,11 @@ def get_status():
                 "enabled": get_setting("ldap_enabled") == "true",
                 "running": ldap_mgr.is_running(),
                 "port": get_setting("ldap_port", "389")
+            },
+            "ntp": {
+                "enabled": get_setting("ntp_enabled") == "true",
+                "running": ntp_mgr.is_running(),
+                "port": "123"
             }
         }
     }
@@ -352,6 +367,16 @@ def toggle_service(name: str, payload: ServiceToggle):
                 raise HTTPException(status_code=500, detail="Failed to start OpenLDAP slapd. Make sure slapd binary is installed.")
         else:
             ldap_mgr.stop()
+            
+    elif name == "ntp":
+        set_setting("ntp_enabled", val)
+        if payload.enabled:
+            success = ntp_mgr.start()
+            if not success:
+                set_setting("ntp_enabled", "false")
+                raise HTTPException(status_code=500, detail="Failed to start NTP daemon (chronyd).")
+        else:
+            ntp_mgr.stop()
             
     else:
         raise HTTPException(status_code=400, detail="Invalid service name")
@@ -707,6 +732,30 @@ def update_ldap_group_members(group_name: str, payload: LdapGroupMembersModel):
     if not success:
         raise HTTPException(status_code=400, detail=msg)
     return {"status": "success", "message": msg}
+# --- NTP API ---
+@app.get("/api/ntp")
+def get_ntp_status():
+    return {
+        "enabled": get_setting("ntp_enabled") == "true",
+        "pools": get_setting("ntp_pools", "pool.ntp.org iburst"),
+        "stats": ntp_mgr.get_stats()
+    }
+
+@app.post("/api/ntp/settings")
+def update_ntp_settings(payload: NtpSettingsModel):
+    val = "true" if payload.enabled else "false"
+    set_setting("ntp_enabled", val)
+    set_setting("ntp_pools", payload.pools)
+    
+    if payload.enabled:
+        success = ntp_mgr.start()
+        if not success:
+            set_setting("ntp_enabled", "false")
+            raise HTTPException(status_code=500, detail="Failed to start NTP daemon (chronyd).")
+    else:
+        ntp_mgr.stop()
+        
+    return {"status": "success", "message": "NTP configuration updated."}
 
 # --- Syslog and Auth Logs API ---
 @app.get("/api/syslog")

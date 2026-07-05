@@ -1,7 +1,7 @@
 {
     "name": "NetLab Services",
     "category": "end_device",
-    "description": "All-in-One central network services VM (DNS, DHCP, RADIUS, TACACS+, LDAP, and Syslog) based on Alpine Linux with a web management UI.",
+    "description": "All-in-One central network services VM (DNS, DHCP, RADIUS, TACACS+, LDAP, NTP, and Syslog) based on Alpine Linux with a web management UI.",
     "vendor_name": "NetLab",
     "vendor_url": "https://github.com/netlab-services",
     "documentation_url": "https://github.com/netlab-services/wiki",
@@ -27,8 +27,8 @@
         {
             "filename": "netlab-services.qcow2",
             "version": "1.0",
-            "md5sum": "1aba485de485c892e9eaabcbe8086fc0",
-            "filesize": 621477888
+            "md5sum": "367ed860199c104d93951555582247ec",
+            "filesize": 637665280
         }
     ],
     "versions": [

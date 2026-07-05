@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     flex \
     libwrap0-dev \
     libpam0g-dev \
+    chrony \
     && rm -rf /var/lib/apt/lists/*
 
 # Download, compile, and install Shrubbery tac_plus
@@ -50,7 +51,7 @@ COPY entrypoint.sh /app/entrypoint.sh
 # 49: TACACS+ (TCP)
 # 1812: RADIUS Auth (UDP)
 # 1813: RADIUS Acct (UDP)
-EXPOSE 80 53/udp 53/tcp 67/udp 389 514/udp 49 1812/udp 1813/udp
+EXPOSE 80 53/udp 53/tcp 67/udp 389 514/udp 49 1812/udp 1813/udp 123/udp
 
 # Set entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]

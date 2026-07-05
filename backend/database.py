@@ -172,7 +172,9 @@ def init_db():
         "ldap_root_dn": "cn=admin,dc=netlab,dc=local",
         "ldap_root_password": "adminpassword",
         "syslog_enabled": "true",
-        "syslog_port": "514"
+        "syslog_port": "514",
+        "ntp_enabled": "false",
+        "ntp_pools": "pool.ntp.org iburst"
     }
     
     for key, val in default_settings.items():

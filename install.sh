@@ -42,14 +42,17 @@ apt-get install -y \
     flex \
     libwrap0-dev \
     libpam0g-dev \
-    ufw
+    ufw \
+    chrony
 
-# Disable default slapd & dnsmasq service startup (our backend controls them)
-echo -e "${GREEN}Disabling default automatic startup of slapd and dnsmasq...${NC}"
+# Disable default slapd, dnsmasq, and chrony service startup (our backend controls them)
+echo -e "${GREEN}Disabling default automatic startup of slapd, dnsmasq, and chrony...${NC}"
 systemctl stop dnsmasq || true
 systemctl disable dnsmasq || true
 systemctl stop slapd || true
 systemctl disable slapd || true
+systemctl stop chrony || true
+systemctl disable chrony || true
 
 # 2. Compile and Install tac_plus
 echo -e "${GREEN}2. Compiling Shrubbery tac_plus daemon from source...${NC}"
@@ -124,6 +127,7 @@ if command -v ufw &> /dev/null; then
     ufw allow 49/tcp comment "NetLab TACACS+"
     ufw allow 1812/udp comment "NetLab RADIUS Auth"
     ufw allow 1813/udp comment "NetLab RADIUS Acct"
+    ufw allow 123/udp comment "NetLab NTP"
 fi
 
 echo -e "${GREEN}===========================================${NC}"

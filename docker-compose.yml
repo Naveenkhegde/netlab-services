@@ -17,6 +17,7 @@ services:
       - "49:49/tcp"        # TACACS+
       - "1812:1812/udp"    # RADIUS Authentication
       - "1813:1813/udp"    # RADIUS Accounting
+      - "123:123/udp"      # NTP
     volumes:
       - netlab-config:/etc/netlab
       - ldap-data:/var/lib/ldap

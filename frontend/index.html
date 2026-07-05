@@ -33,6 +33,7 @@
                 <li class="menu-item"><a class="menu-link" data-target="view-radius"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>RADIUS (AAA)</a></li>
                 <li class="menu-item"><a class="menu-link" data-target="view-tacacs"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>TACACS+ (AAA)</a></li>
                 <li class="menu-item"><a class="menu-link" data-target="view-ldap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>LDAP Directory</a></li>
+                <li class="menu-item"><a class="menu-link" data-target="view-ntp"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>NTP Time Server</a></li>
             </ul>
         </div>
 
@@ -172,6 +173,17 @@
                         </div>
                         <label class="switch">
                             <input type="checkbox" id="toggle-ldap" onchange="toggleService('ldap')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="service-widget">
+                        <div class="service-widget-info">
+                            <span class="service-widget-name">NTP Time Server <span id="badge-ntp" class="status-indicator inactive"><div class="status-dot"></div>Inactive</span></span>
+                            <span class="service-widget-desc">Network Time Protocol daemon (chronyd) for lab clock sync</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-ntp" onchange="toggleService('ntp')">
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -725,6 +737,67 @@ aaa accounting exec default start-stop group tacacs+
                 </div>
             </div>
         </div>
+
+        <!-- 8. NTP VIEW -->
+        <div id="view-ntp" class="view-panel">
+            <div class="card">
+                <div class="card-title">NTP Time Server (chronyd) Configuration</div>
+                <form id="form-ntp-settings" onsubmit="saveNtpSettings(event)">
+                    <div class="form-group">
+                        <label for="ntp-pools">Upstream NTP Pools (comma-separated)</label>
+                        <input type="text" id="ntp-pools" value="pool.ntp.org iburst" placeholder="e.g. pool.ntp.org iburst, time.google.com iburst" required>
+                        <span class="help-text" style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: block;">
+                            Network clients can sync time from this appliance's IP address. Standard configuration: <code>ntp server &lt;appliance-ip&gt;</code>.
+                        </span>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 12px;">Save & Apply Config</button>
+                </form>
+            </div>
+
+            <div class="grid-2">
+                <!-- Sync Status -->
+                <div class="card">
+                    <div class="card-title">Synchronization Status (tracking)</div>
+                    <div class="ntp-stat-box" style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--bg-primary); border-radius: 8px; border: 1px solid var(--glass-border);">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">Leap Status:</span>
+                            <span id="ntp-tracking-sync" style="font-weight: 600; color: var(--danger);">Unsynchronized</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">Stratum:</span>
+                            <span id="ntp-tracking-stratum" style="font-weight: 600;">10 (Offline Local Mode)</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">Reference ID:</span>
+                            <span id="ntp-tracking-ref" style="font-family: monospace;">None</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upstream Sources -->
+                <div class="card">
+                    <div class="card-title">Upstream Time Sources (sources)</div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px; text-align: center;">State</th>
+                                    <th>Server Address</th>
+                                    <th style="width: 80px; text-align: center;">Stratum</th>
+                                    <th style="width: 100px; text-align: center;">Last Reach</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ntp-sources-table">
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text-muted);">NTP service is inactive or not synchronized yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     </div>
 
     <!-- Group Members Dialog Modal -->
