@@ -20,7 +20,7 @@
         "arch": "x86_64",
         "console_type": "telnet",
         "boot_priority": "c",
-        "kvm": "allowed",
+        "kvm": "allow",
         "options": "-nographic"
     },
     "images": [
