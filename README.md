@@ -13,13 +13,14 @@ Rather than running multiple VMs or complex configurations, this project provide
 - 🛡️ **TACACS+ Server (`tac_plus`)**: Cisco/Juniper management authentication, authorization, and accounting with customizable privilege levels (1-15).
 - 📂 **LDAP Server (OpenLDAP `slapd`)**: Centralized directory structure simulation (under `ou=users` and `ou=groups`) for enterprise AAA setups.
 - ⏰ **NTP Server (`chrony`)**: Time synchronization daemon serving clocks to lab devices (supports local stratum 10 fallback).
+- 📁 **File Store (TFTP / FTP / SFTP)**: Direct configuration upload/download support from routers and switches to a central shared directory (`/var/lib/netlab/files`).
 - 📊 **Syslog Collector**: Real-time UDP port 514 syslog server displaying logs color-coded by facility/severity with instant filtering.
 - 💻 **Hardware Monitoring**: Instant widgets showing CPU load, RAM usage, disk usage, and uptime.
 
 ---
 
 ## Project Output Files
-- `netlab-services.qcow2`: The prebuilt, bootable Alpine Linux QEMU disk image (609MB).
+- `netlab-services.qcow2`: The prebuilt, bootable Alpine Linux QEMU disk image (616MB).
 - `netlab-services.gns3a`: Official GNS3 appliance template for one-click drag-and-drop integration.
 - `install.sh`: Native bash script to deploy on a clean Debian/Ubuntu VM.
 - `/backend`: FastAPI Python server and SQLite configuration database.
