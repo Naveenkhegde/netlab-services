@@ -174,7 +174,9 @@ def init_db():
         "syslog_enabled": "true",
         "syslog_port": "514",
         "ntp_enabled": "false",
-        "ntp_pools": "pool.ntp.org iburst"
+        "ntp_pools": "pool.ntp.org iburst",
+        "tftp_enabled": "false",
+        "ftp_enabled": "false"
     }
     
     for key, val in default_settings.items():

@@ -34,6 +34,7 @@
                 <li class="menu-item"><a class="menu-link" data-target="view-tacacs"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>TACACS+ (AAA)</a></li>
                 <li class="menu-item"><a class="menu-link" data-target="view-ldap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>LDAP Directory</a></li>
                 <li class="menu-item"><a class="menu-link" data-target="view-ntp"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>NTP Time Server</a></li>
+                <li class="menu-item"><a class="menu-link" data-target="view-files"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>File Manager</a></li>
             </ul>
         </div>
 
@@ -184,6 +185,28 @@
                         </div>
                         <label class="switch">
                             <input type="checkbox" id="toggle-ntp" onchange="toggleService('ntp')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="service-widget">
+                        <div class="service-widget-info">
+                            <span class="service-widget-name">TFTP Server <span id="badge-tftp" class="status-indicator inactive"><div class="status-dot"></div>Inactive</span></span>
+                            <span class="service-widget-desc">Trivial File Transfer Protocol daemon (UDP 69) for device configs</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-tftp" onchange="toggleService('tftp')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="service-widget">
+                        <div class="service-widget-info">
+                            <span class="service-widget-name">FTP Server <span id="badge-ftp" class="status-indicator inactive"><div class="status-dot"></div>Inactive</span></span>
+                            <span class="service-widget-desc">File Transfer Protocol daemon (TCP 21) with anonymous write access</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-ftp" onchange="toggleService('ftp')">
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -794,6 +817,60 @@ aaa accounting exec default start-stop group tacacs+
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 9. FILE MANAGER VIEW -->
+        <div id="view-files" class="view-panel">
+            <div class="card">
+                <div class="card-title">Shared File Manager (TFTP / FTP / SFTP)</div>
+                <p style="color: var(--text-secondary); font-size: 13.5px; margin-bottom: 20px;">
+                    This appliance runs <strong>TFTP</strong> (UDP 69), <strong>FTP</strong> (TCP 21), and <strong>SFTP</strong> (TCP 22) servers. All file transfers are mapped to a central directory <code>/var/lib/netlab/files</code>. Use this directory to backup configuration files, save IOS images, or transfer licenses.
+                </p>
+                
+                <div class="grid-2" style="margin-bottom: 24px;">
+                    <!-- Upload Box -->
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <span style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Upload File to Appliance</span>
+                        <form id="form-file-upload" onsubmit="uploadFileManagerFile(event)" style="display: flex; gap: 10px;">
+                            <input type="file" id="file-input-field" required style="padding: 6px;">
+                            <button type="submit" class="btn btn-primary" style="white-space: nowrap;">Upload File</button>
+                        </form>
+                    </div>
+
+                    <!-- Client transfer help box -->
+                    <div style="background: rgba(37, 99, 235, 0.05); padding: 16px; border-radius: 8px; border: 1px solid rgba(37, 99, 235, 0.1); font-size: 12px; line-height: 1.5;">
+                        <span style="font-weight: 700; color: var(--accent); display: block; margin-bottom: 6px;">Cisco IOS Configuration Examples:</span>
+                        <code># Save configuration to TFTP:</code><br>
+                        <code style="color: #fff; background: #000; padding: 2px 4px; display: block; margin: 4px 0;">copy running-config tftp://&lt;appliance-ip&gt;/running-config.txt</code>
+                        <code># Save configuration to FTP (Anonymous):</code><br>
+                        <code style="color: #fff; background: #000; padding: 2px 4px; display: block; margin: 4px 0;">copy running-config ftp://anonymous@&lt;appliance-ip&gt;/running-config.txt</code>
+                        <code># Save configuration to SFTP (Root User):</code><br>
+                        <code style="color: #fff; background: #000; padding: 2px 4px; display: block; margin: 4px 0;">copy running-config sftp://root:netlab@&lt;appliance-ip&gt;/running-config.txt</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Files list -->
+            <div class="card">
+                <div class="card-title">Shared File Store Directory</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>File Name</th>
+                                <th style="width: 100px; text-align: center;">Size</th>
+                                <th style="width: 160px; text-align: center;">Last Modified</th>
+                                <th style="width: 120px; text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="files-list-table">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--text-muted);">No files stored in shared directory yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

@@ -193,7 +193,8 @@ function switchTab(targetId) {
         "view-radius": { t: "RADIUS Authentication", s: "Remote AAA authentication configuration" },
         "view-tacacs": { t: "TACACS+ Administration", s: "Command authorization and management access control" },
         "view-ldap": { t: "LDAP Directory Tree", s: "Centralized network directory management" },
-        "view-ntp": { t: "NTP Time Synchronization", s: "Network Time Protocol daemon management" }
+        "view-ntp": { t: "NTP Time Synchronization", s: "Network Time Protocol daemon management" },
+        "view-files": { t: "Shared File Manager", s: "Upload and download configurations via TFTP, FTP, and SFTP" }
     };
 
     if (titleMap[targetId]) {
@@ -208,6 +209,7 @@ function switchTab(targetId) {
     if (targetId === "view-tacacs") fetchTacacs();
     if (targetId === "view-ldap") fetchLdap();
     if (targetId === "view-ntp") fetchNtp();
+    if (targetId === "view-files") fetchFiles();
 }
 
 // --- Status & Statistics Polling ---
@@ -966,6 +968,91 @@ async function saveNtpSettings(e) {
         const err = await res.json();
         alert(err.detail || "Failed to update NTP settings.");
     }
+}
+
+// --- File Manager Functions ---
+async function fetchFiles() {
+    try {
+        const res = await fetch("/api/files");
+        const files = await res.json();
+
+        const tbody = document.getElementById("files-list-table");
+        if (files.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No files found in shared directory yet</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = files.map(file => {
+            return `
+                <tr>
+                    <td style="font-weight: 500; font-family: monospace;">${escapeHtml(file.name)}</td>
+                    <td style="text-align: center;">${formatBytes(file.size)}</td>
+                    <td style="text-align: center; color: var(--text-secondary); font-size: 13px;">${escapeHtml(file.modified)}</td>
+                    <td style="text-align: center;">
+                        <a href="/api/files/download/${encodeURIComponent(file.name)}" class="btn btn-secondary btn-sm" style="padding: 4px 8px; margin-right: 6px;">Download</a>
+                        <button class="btn btn-danger btn-sm" style="padding: 4px 8px;" onclick="deleteFileManagerFile('${escapeHtml(file.name)}')">&times;</button>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+
+        applyRoleRestrictions();
+
+    } catch (err) {
+        console.error("Error fetching files:", err);
+    }
+}
+
+async function uploadFileManagerFile(e) {
+    e.preventDefault();
+    const fileField = document.getElementById("file-input-field");
+    if (fileField.files.length === 0) return;
+
+    const formData = new FormData();
+    formData.append("file", fileField.files[0]);
+
+    try {
+        const res = await fetch("/api/files/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        if (res.ok) {
+            fileField.value = "";
+            fetchFiles();
+        } else {
+            const err = await res.json();
+            alert(err.detail || "Failed to upload file.");
+        }
+    } catch (err) {
+        alert("Upload error.");
+    }
+}
+
+async function deleteFileManagerFile(filename) {
+    if (!confirm(`Are you sure you want to delete '${filename}'?`)) return;
+    try {
+        const res = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+            method: "DELETE"
+        });
+        if (res.ok) {
+            fetchFiles();
+        } else {
+            const err = await res.json();
+            alert(err.detail || "Failed to delete file.");
+        }
+    } catch (err) {
+        alert("Deletion error.");
+    }
+}
+
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
 // --- AAA Auth Logs Helper ---

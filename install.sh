@@ -128,6 +128,8 @@ if command -v ufw &> /dev/null; then
     ufw allow 1812/udp comment "NetLab RADIUS Auth"
     ufw allow 1813/udp comment "NetLab RADIUS Acct"
     ufw allow 123/udp comment "NetLab NTP"
+    ufw allow 69/udp comment "NetLab TFTP"
+    ufw allow 21/tcp comment "NetLab FTP"
 fi
 
 echo -e "${GREEN}===========================================${NC}"

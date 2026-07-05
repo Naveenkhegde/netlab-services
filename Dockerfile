@@ -51,7 +51,7 @@ COPY entrypoint.sh /app/entrypoint.sh
 # 49: TACACS+ (TCP)
 # 1812: RADIUS Auth (UDP)
 # 1813: RADIUS Acct (UDP)
-EXPOSE 80 53/udp 53/tcp 67/udp 389 514/udp 49 1812/udp 1813/udp 123/udp
+EXPOSE 80 53/udp 53/tcp 67/udp 389 514/udp 49 1812/udp 1813/udp 123/udp 69/udp 21/tcp
 
 # Set entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]

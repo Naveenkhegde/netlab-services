@@ -7,7 +7,7 @@ import sqlite3
 from typing import List, Optional
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, Depends, Header, Request
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, Depends, Header, Request, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -23,6 +23,8 @@ from services.dns_dhcp import DnsmasqManager
 from services.tacacs import TacacsManager
 from services.ldap import LdapManager
 from services.ntp import NtpManager
+from services.tftp import TftpManager
+from services.ftp import FtpManager
 
 app = FastAPI(title="NetLab Services Control Panel API", version="1.0.0")
 
@@ -33,6 +35,8 @@ dnsmasq_mgr = DnsmasqManager(DB_PATH, "/etc/netlab/dnsmasq.conf", "/var/lib/misc
 tacacs_mgr = TacacsManager(DB_PATH, "/etc/netlab/tac_plus.conf")
 ldap_mgr = LdapManager(DB_PATH, "/etc/netlab/slapd.conf", "/var/lib/ldap")
 ntp_mgr = NtpManager(DB_PATH)
+tftp_mgr = TftpManager(DB_PATH)
+ftp_mgr = FtpManager(DB_PATH)
 
 # --- Startup Event ---
 @app.on_event("startup")
@@ -62,6 +66,12 @@ def startup_event():
         
     if get_setting("ntp_enabled") == "true":
         ntp_mgr.start()
+        
+    if get_setting("tftp_enabled") == "true":
+        tftp_mgr.start()
+        
+    if get_setting("ftp_enabled") == "true":
+        ftp_mgr.start()
 
 # --- Shutdown Event ---
 @app.on_event("shutdown")
@@ -73,6 +83,8 @@ def shutdown_event():
     tacacs_mgr.stop()
     ldap_mgr.stop()
     ntp_mgr.stop()
+    tftp_mgr.stop()
+    ftp_mgr.stop()
 
 def verify_admin(x_user_role: str = Header(default="viewer")):
     if x_user_role != "admin":
@@ -309,6 +321,16 @@ def get_status():
                 "enabled": get_setting("ntp_enabled") == "true",
                 "running": ntp_mgr.is_running(),
                 "port": "123"
+            },
+            "tftp": {
+                "enabled": get_setting("tftp_enabled") == "true",
+                "running": tftp_mgr.is_running(),
+                "port": "69"
+            },
+            "ftp": {
+                "enabled": get_setting("ftp_enabled") == "true",
+                "running": ftp_mgr.is_running(),
+                "port": "21"
             }
         }
     }
@@ -377,6 +399,26 @@ def toggle_service(name: str, payload: ServiceToggle):
                 raise HTTPException(status_code=500, detail="Failed to start NTP daemon (chronyd).")
         else:
             ntp_mgr.stop()
+            
+    elif name == "tftp":
+        set_setting("tftp_enabled", val)
+        if payload.enabled:
+            success = tftp_mgr.start()
+            if not success:
+                set_setting("tftp_enabled", "false")
+                raise HTTPException(status_code=500, detail="Failed to start TFTP daemon. Make sure you run as root to bind to port 69.")
+        else:
+            tftp_mgr.stop()
+            
+    elif name == "ftp":
+        set_setting("ftp_enabled", val)
+        if payload.enabled:
+            success = ftp_mgr.start()
+            if not success:
+                set_setting("ftp_enabled", "false")
+                raise HTTPException(status_code=500, detail="Failed to start FTP daemon. Make sure you run as root to bind to port 21.")
+        else:
+            ftp_mgr.stop()
             
     else:
         raise HTTPException(status_code=400, detail="Invalid service name")
@@ -756,6 +798,70 @@ def update_ntp_settings(payload: NtpSettingsModel):
         ntp_mgr.stop()
         
     return {"status": "success", "message": "NTP configuration updated."}
+
+# --- File Manager API ---
+SHARE_DIR = "/var/lib/netlab/files"
+
+@app.get("/api/files")
+def list_files():
+    os.makedirs(SHARE_DIR, exist_ok=True)
+    files = []
+    try:
+        for entry in os.scandir(SHARE_DIR):
+            if entry.is_file():
+                stat = entry.stat()
+                mtime = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+                files.append({
+                    "name": entry.name,
+                    "size": stat.st_size,
+                    "modified": mtime
+                })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to scan directory: {e}")
+    files.sort(key=lambda x: x["name"])
+    return files
+
+@app.post("/api/files/upload")
+async def upload_file(file: UploadFile = File(...)):
+    os.makedirs(SHARE_DIR, exist_ok=True)
+    safe_name = os.path.basename(file.filename)
+    if not safe_name or safe_name in [".", ".."]:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+        
+    target_path = os.path.join(SHARE_DIR, safe_name)
+    try:
+        with open(target_path, "wb") as f:
+            while content := await file.read(1024 * 1024):
+                f.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+        
+    return {"status": "success", "message": f"File '{safe_name}' uploaded successfully."}
+
+@app.delete("/api/files/{filename}")
+def delete_file(filename: str):
+    safe_name = os.path.basename(filename)
+    target_path = os.path.join(SHARE_DIR, safe_name)
+    
+    if not os.path.exists(target_path) or not os.path.isfile(target_path):
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    try:
+        os.remove(target_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete file: {e}")
+        
+    return {"status": "success", "message": f"File '{safe_name}' deleted successfully."}
+
+@app.get("/api/files/download/{filename}")
+def download_file(filename: str):
+    safe_name = os.path.basename(filename)
+    target_path = os.path.join(SHARE_DIR, safe_name)
+    
+    if not os.path.exists(target_path) or not os.path.isfile(target_path):
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    return FileResponse(path=target_path, filename=safe_name, media_type="application/octet-stream")
 
 # --- Syslog and Auth Logs API ---
 @app.get("/api/syslog")

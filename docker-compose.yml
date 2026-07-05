@@ -18,6 +18,8 @@ services:
       - "1812:1812/udp"    # RADIUS Authentication
       - "1813:1813/udp"    # RADIUS Accounting
       - "123:123/udp"      # NTP
+      - "69:69/udp"        # TFTP
+      - "21:21/tcp"        # FTP
     volumes:
       - netlab-config:/etc/netlab
       - ldap-data:/var/lib/ldap
