@@ -1,0 +1,29 @@
+#!/sbin/openrc-run
+
+name="netlab-services"
+description="NetLab Services All-in-One Dashboard"
+
+command="/opt/netlab-services/venv/bin/uvicorn"
+command_args="backend.main:app --host 0.0.0.0 --port 80"
+command_background="true"
+directory="/opt/netlab-services"
+pidfile="/run/netlab-services.pid"
+
+output_log="/var/log/netlab-services.log"
+error_log="/var/log/netlab-services.log"
+
+depend() {
+    after net
+    after firewall
+}
+
+start_pre() {
+    # Ensure run-time folders exist
+    mkdir -p /etc/netlab
+    mkdir -p /var/lib/ldap
+    mkdir -p /var/lib/misc
+    touch /var/lib/misc/dnsmasq.leases
+    
+    # Initialize SQLite database if empty
+    /opt/netlab-services/venv/bin/python /opt/netlab-services/backend/database.py
+}
