@@ -327,7 +327,8 @@ erDiagram
 ├── README.md                       # Comprehensive project overview and Cisco lab configs
 ├── prd.md                          # Product Requirements Document (PRD)
 ├── architecture.md                 # Technical Architecture & System Design Document
-├── archetecture.md                 # Architecture Document (Alias)
+├── mindmap.md                      # System Architecture Linking Graph & Mind Map
+├── man.md                          # Manual Page and Command Reference
 ├── phase.md                        # Development, Feature Delivery & Deployment Roadmap
 ├── docker-compose.yml              # Docker Compose deployment definition (NET_ADMIN cap)
 ├── entrypoint.sh                   # Container startup and database initialization script
