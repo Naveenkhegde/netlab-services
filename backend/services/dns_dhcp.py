@@ -61,22 +61,82 @@ class DnsmasqManager:
         # --- DHCP Configuration ---
         if dhcp_enabled:
             interface = settings.get("dhcp_interface", "eth0")
-            start = settings.get("dhcp_start", "192.168.1.100")
-            end = settings.get("dhcp_end", "192.168.1.200")
-            netmask = settings.get("dhcp_netmask", "255.255.255.0")
-            lease_time = settings.get("dhcp_lease_time", "12h")
-            gateway = settings.get("dhcp_gateway", "192.168.1.1")
-            dns_servers = settings.get("dhcp_dns_servers", "")
-            
             config_lines.append(f"interface={interface}")
-            config_lines.append(f"dhcp-range={start},{end},{netmask},{lease_time}")
-            
-            if gateway:
-                config_lines.append(f"dhcp-option=option:router,{gateway}")
-                
-            if dns_servers:
-                config_lines.append(f"dhcp-option=option:dns-server,{dns_servers}")
-                
+
+            cursor.execute("SELECT * FROM dhcp_ranges")
+            ranges = [dict(r) for r in cursor.fetchall()]
+
+            if not ranges:
+                # Fallback if table is empty
+                start = settings.get("dhcp_start", "192.168.1.100")
+                end = settings.get("dhcp_end", "192.168.1.200")
+                netmask = settings.get("dhcp_netmask", "255.255.255.0")
+                lease_time = settings.get("dhcp_lease_time", "12h")
+                gateway = settings.get("dhcp_gateway", "192.168.1.1")
+                dns_servers = settings.get("dhcp_dns_servers", "")
+
+                config_lines.append(f"dhcp-range={start},{end},{netmask},{lease_time}")
+                if gateway:
+                    config_lines.append(f"dhcp-option=option:router,{gateway}")
+                if dns_servers:
+                    config_lines.append(f"dhcp-option=option:dns-server,{dns_servers}")
+            else:
+                for r in ranges:
+                    tag = f"scope_{r['id']}"
+                    start = r['start_ip']
+                    end = r['end_ip']
+                    netmask = r['netmask'] or "255.255.255.0"
+                    lease_time = r['lease_time'] or "12h"
+
+                    config_lines.append(f"dhcp-range=set:{tag},{start},{end},{netmask},{lease_time}")
+
+                    if r.get('gateway'):
+                        config_lines.append(f"dhcp-option=tag:{tag},option:router,{r['gateway']}")
+                    if r.get('dns_servers'):
+                        config_lines.append(f"dhcp-option=tag:{tag},option:dns-server,{r['dns_servers']}")
+                    if r.get('domain_name'):
+                        config_lines.append(f"dhcp-option=tag:{tag},option:domain-name,{r['domain_name']}")
+                    if r.get('ntp_servers'):
+                        config_lines.append(f"dhcp-option=tag:{tag},option:ntp-server,{r['ntp_servers']}")
+                    if r.get('tftp_server'):
+                        config_lines.append(f"dhcp-option=tag:{tag},option:tftp-server,{r['tftp_server']}")
+
+                    # AP Controllers (Option 43 & Option 150)
+                    opt43_hex = (r.get('option_43_hex') or '').strip()
+                    wlc_ips = []
+                    for key in ['primary_wlc', 'secondary_wlc', 'tertiary_wlc']:
+                        if r.get(key) and r.get(key).strip():
+                            wlc_ips.append(r[key].strip())
+
+                    if opt43_hex:
+                        config_lines.append(f"dhcp-option=tag:{tag},43,{opt43_hex}")
+                    elif wlc_ips:
+                        # Cisco Option 150
+                        config_lines.append(f"dhcp-option=tag:{tag},150,{','.join(wlc_ips)}")
+
+                        # Cisco CAPWAP Option 43 suboption 0xf1 (241 decimal) hex string
+                        try:
+                            hex_ips = []
+                            for ip in wlc_ips:
+                                octets = [int(x) for x in ip.split('.')]
+                                hex_ips.append(":".join(f"{x:02x}" for x in octets))
+                            total_bytes = len(wlc_ips) * 4
+                            capwap_opt43 = f"f1:{total_bytes:02x}:" + ":".join(hex_ips)
+                            config_lines.append(f"dhcp-option=tag:{tag},43,{capwap_opt43}")
+                        except Exception as err:
+                            print(f"Error formatting CAPWAP Option 43 hex for WLC IPs {wlc_ips}: {err}")
+
+                    # Custom raw options
+                    if r.get('custom_options'):
+                        custom_lines = r['custom_options'].strip().split('\n')
+                        for cline in custom_lines:
+                            cline = cline.strip()
+                            if cline:
+                                if cline.startswith("dhcp-option="):
+                                    config_lines.append(cline)
+                                else:
+                                    config_lines.append(f"dhcp-option=tag:{tag},{cline}")
+
             # Static DHCP leases
             cursor.execute("SELECT mac_address, ip_address, hostname FROM dhcp_static")
             for lease in cursor.fetchall():
@@ -134,9 +194,13 @@ class DnsmasqManager:
             print("dnsmasq stopped.")
 
     def is_running(self):
-        if self.process is None:
+        if self.process is not None and self.process.poll() is None:
+            return True
+        try:
+            out = subprocess.check_output(["pgrep", "-x", "dnsmasq"], text=True, stderr=subprocess.DEVNULL)
+            return bool(out.strip())
+        except Exception:
             return False
-        return self.process.poll() is None
 
     def get_active_leases(self):
         # Parses the dnsmasq lease file

@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import sqlite3
 import shutil
@@ -44,23 +45,31 @@ class TacacsManager:
             config_lines.append("}")
             config_lines.append("")
 
-        # Users and privilege levels
-        # We can map privilege levels by defining groups or direct user exec service rules.
-        # Standard Shrubbery config for user with exec privilege level 15:
-        # user = username {
-        #     password = clear "password"
-        #     service = exec {
-        #         priv-lvl = 15
-        #     }
-        # }
-        cursor.execute("SELECT username, password, privilege FROM tacacs_users")
-        users = cursor.fetchall()
+        # Users, privilege levels, and command authorization rules
+        cursor.execute("SELECT * FROM tacacs_users")
+        users = [dict(u) for u in cursor.fetchall()]
+
         for user in users:
-            config_lines.append(f"user = {user['username']} {{")
+            username = user["username"]
+            default_act = user.get("default_action", "permit")
+            config_lines.append(f"user = {username} {{")
+            config_lines.append(f"    default service = {default_act}")
             config_lines.append(f"    password = clear \"{user['password']}\"")
             config_lines.append("    service = exec {")
             config_lines.append(f"        priv-lvl = {user['privilege']}")
             config_lines.append("    }")
+
+            # Fetch user command authorization rules
+            cursor.execute("SELECT * FROM tacacs_cmd_rules WHERE username = ? ORDER BY id ASC", (username,))
+            rules = cursor.fetchall()
+            for r in rules:
+                cmd = r["command"].strip()
+                regex = r["argument_regex"].strip() or ".*"
+                act = r["action"]
+                config_lines.append(f"    cmd = {cmd} {{")
+                config_lines.append(f"        {act} \"{regex}\"")
+                config_lines.append("    }")
+
             config_lines.append("}")
             config_lines.append("")
 
@@ -71,6 +80,68 @@ class TacacsManager:
             f.write("\n".join(config_lines) + "\n")
             
         return True
+
+    def test_authorization(self, username, full_command):
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT * FROM tacacs_users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+        if not user:
+            conn.close()
+            return {
+                "status": "DENIED",
+                "username": username,
+                "command": full_command,
+                "privilege": 0,
+                "matched_rule": "User Not Found",
+                "reason": f"TACACS+ User '{username}' does not exist."
+            }
+
+        user_dict = dict(user)
+        default_action = user_dict.get("default_action", "permit").lower()
+
+        # Parse command string
+        parts = full_command.strip().split(maxsplit=1)
+        base_cmd = parts[0] if parts else ""
+        cmd_args = parts[1] if len(parts) > 1 else ""
+
+        cursor.execute("SELECT * FROM tacacs_cmd_rules WHERE username = ? ORDER BY id ASC", (username,))
+        rules = [dict(r) for r in cursor.fetchall()]
+        conn.close()
+
+        matched_rule = None
+        final_action = default_action
+
+        for r in rules:
+            target_cmd = r["command"].strip()
+            regex = r["argument_regex"].strip() or ".*"
+
+            # Match command name or wildcard
+            if target_cmd == "*" or target_cmd.lower() == base_cmd.lower():
+                try:
+                    if re.search(regex, cmd_args, re.IGNORECASE) or (not cmd_args and (regex == ".*" or regex == "")):
+                        final_action = r["action"].lower()
+                        matched_rule = f"cmd = {target_cmd} {{ {final_action} \"{regex}\" }}"
+                        break
+                except Exception as err:
+                    print(f"Regex matching error in TACACS+ rule evaluation: {err}")
+
+        is_permitted = final_action == "permit"
+        status_text = "PERMITTED" if is_permitted else "DENIED"
+
+        reason = f"Matched explicit rule: {matched_rule}" if matched_rule else f"No explicit rule matched. Applied user default service action: {default_action.upper()}"
+
+        return {
+            "status": status_text,
+            "username": username,
+            "command": full_command,
+            "privilege": user_dict["privilege"],
+            "default_action": default_action,
+            "matched_rule": matched_rule or f"Default Service ({default_action})",
+            "reason": reason
+        }
 
     def start(self):
         self.stop()
@@ -86,8 +157,6 @@ class TacacsManager:
             return False
             
         try:
-            # -G runs it in foreground so we can monitor/terminate it easily.
-            # -p specify port (default is 49). Let's fetch the port if customized.
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute("SELECT value FROM settings WHERE key='tacacs_port'")
@@ -95,7 +164,6 @@ class TacacsManager:
             port = row[0] if row else "49"
             conn.close()
             
-            # Shrubbery tac_plus uses -p for port.
             cmd = ["tac_plus", "-C", self.conf_path, "-G", "-p", port]
             self.process = subprocess.Popen(
                 cmd,
@@ -124,6 +192,10 @@ class TacacsManager:
             print("tac_plus stopped.")
 
     def is_running(self):
-        if self.process is None:
+        if self.process is not None and self.process.poll() is None:
+            return True
+        try:
+            out = subprocess.check_output(["pgrep", "-f", "tac_plus"], text=True, stderr=subprocess.DEVNULL)
+            return bool(out.strip())
+        except Exception:
             return False
-        return self.process.poll() is None

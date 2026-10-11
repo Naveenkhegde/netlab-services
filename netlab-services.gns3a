@@ -1,7 +1,7 @@
 {
     "name": "NetLab Services",
     "category": "guest",
-    "description": "All-in-One central network services VM (DNS, DHCP, RADIUS, TACACS+, LDAP, NTP, Syslog, TFTP, and FTP) based on Alpine Linux with a web management UI.",
+    "description": "All-in-One central network services VM (IPAM, Multi-Scope DHCP, DNS, RADIUS, TACACS+, LDAP, NTP, TFTP, and FTP) based on Alpine Linux with a modern web control panel UI.",
     "vendor_name": "NetLab",
     "vendor_url": "https://github.com/netlab-services",
     "documentation_url": "https://github.com/netlab-services/wiki",
@@ -10,7 +10,7 @@
     "status": "stable",
     "maintainer": "NetLab Community",
     "maintainer_email": "community@netlab.local",
-    "usage": "Connect the appliance to a switch. Wait for it to boot (approx. 5 seconds), then open a web browser and go to http://<appliance-ip> to access the Control Panel Web UI. Root login: root/netlab. Default TACACS+ secret is 'tacsecret', RADIUS secret is 'radsecret', LDAP base DN is 'dc=netlab,dc=local'. File manager files can be transferred via TFTP (UDP 69), FTP (TCP 21, anonymous or root), and SFTP (TCP 22).",
+    "usage": "Connect the appliance to a switch. Wait for it to boot (approx. 5 seconds), then open a web browser and navigate to http://<appliance-ip> to access the Control Panel Web UI. Built-in IPAM engine, TACACS+ Command Authorization Builder & Simulator, RADIUS CoA / Disconnect Packet Generator, and Network Interface Manager. Root SSH login: root/netlab. Default TACACS+ secret: 'tacsecret', RADIUS secret: 'radsecret', LDAP base DN: 'dc=netlab,dc=local'.",
     "port_name_format": "eth{0}",
     "qemu": {
         "adapter_type": "virtio-net-pci",
@@ -27,7 +27,7 @@
         {
             "filename": "netlab-services.qcow2",
             "version": "1.0",
-            "md5sum": "f9aa0bde878670739874abba9876729f",
+            "md5sum": "c9dc94253865ba3208936de172e9e34f",
             "filesize": 649854976
         }
     ],

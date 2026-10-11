@@ -154,9 +154,13 @@ class LdapManager:
             print("slapd stopped.")
 
     def is_running(self):
-        if self.process is None:
+        if self.process is not None and self.process.poll() is None:
+            return True
+        try:
+            out = subprocess.check_output(["pgrep", "-x", "slapd"], text=True, stderr=subprocess.DEVNULL)
+            return bool(out.strip())
+        except Exception:
             return False
-        return self.process.poll() is None
 
     def _get_ldap_connection(self):
         conn = sqlite3.connect(self.db_path)

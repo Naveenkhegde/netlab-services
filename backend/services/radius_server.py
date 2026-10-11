@@ -43,7 +43,7 @@ class LabRadiusServer(server.Server):
                 
         self.dict = dictionary.Dictionary(dict_path)
         # Bind to socket using pyrad's constructor
-        super().__init__(addresses=[(host, port)], dict=self.dict)
+        super().__init__(addresses=[host], authport=port, acctport=port + 1, dict=self.dict)
         self.refresh_clients()
 
     def refresh_clients(self):
@@ -179,3 +179,119 @@ class RadiusServerManager:
     def refresh(self):
         if self.server:
             self.server.refresh_clients()
+
+import socket
+import struct
+import hashlib
+import time
+
+def send_radius_coa(nas_ip, coa_port=3799, secret="radsecret", packet_type="Disconnect-Request", user_name="", calling_station_id="", vlan_id=None, filter_id=""):
+    """
+    Sends RFC 3576 RADIUS CoA (Code 43) or Disconnect-Request (Code 40) packet to NAS IP.
+    """
+    code_map = {
+        "Disconnect-Request": 40,
+        "CoA-Request": 43
+    }
+    code = code_map.get(packet_type, 40)
+    identifier = int(time.time() * 1000) % 256
+
+    # Build TLV Attributes
+    attrs = bytearray()
+    
+    if user_name:
+        b = user_name.encode('utf-8')
+        attrs += struct.pack("BB", 1, 2 + len(b)) + b # User-Name (Attr 1)
+        
+    if calling_station_id:
+        b = calling_station_id.encode('utf-8')
+        attrs += struct.pack("BB", 31, 2 + len(b)) + b # Calling-Station-Id (Attr 31)
+
+    if filter_id:
+        b = filter_id.encode('utf-8')
+        attrs += struct.pack("BB", 11, 2 + len(b)) + b # Filter-Id (Attr 11)
+
+    if vlan_id is not None and str(vlan_id).strip():
+        try:
+            vid = int(vlan_id)
+            # Tunnel-Type (Attr 64) = 13 (VLAN)
+            attrs += struct.pack("BB", 64, 6) + struct.pack("!I", 13)
+            # Tunnel-Medium-Type (Attr 65) = 6 (802)
+            attrs += struct.pack("BB", 65, 6) + struct.pack("!I", 6)
+            # Tunnel-Private-Group-Id (Attr 81) = vlan_id string
+            vb = str(vid).encode('utf-8')
+            attrs += struct.pack("BB", 81, 2 + len(vb)) + vb
+        except Exception:
+            pass
+
+    # Calculate packet length: 20 bytes header + len(attrs)
+    pkt_len = 20 + len(attrs)
+
+    # 16-byte zeroes for Authenticator calculation
+    dummy_auth = b"\x00" * 16
+    header_raw = struct.pack("!BBH", code, identifier, pkt_len) + dummy_auth + attrs
+
+    # MD5 Request Authenticator = MD5(Code + ID + Length + 16 zero bytes + Attributes + Secret)
+    authenticator = hashlib.md5(header_raw + secret.encode('utf-8')).digest()
+
+    full_pkt = struct.pack("!BBH", code, identifier, pkt_len) + authenticator + attrs
+
+    # Send via UDP socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(3.0)
+
+    try:
+        start_time = time.time()
+        sock.sendto(full_pkt, (nas_ip, coa_port))
+        data, addr = sock.recvfrom(2048)
+        rtt_ms = round((time.time() - start_time) * 1000, 1)
+
+        if len(data) >= 20:
+            res_code, res_id, res_len = struct.unpack("!BBH", data[:4])
+            res_type_map = {
+                41: "Disconnect-ACK",
+                42: "Disconnect-NAK",
+                44: "CoA-ACK",
+                45: "CoA-NAK"
+            }
+            res_name = res_type_map.get(res_code, f"Unknown Response Code ({res_code})")
+            is_ack = res_code in [41, 44]
+
+            return {
+                "status": "SUCCESS" if is_ack else "REJECTED",
+                "response_type": res_name,
+                "response_code": res_code,
+                "nas_ip": nas_ip,
+                "port": coa_port,
+                "rtt_ms": rtt_ms,
+                "message": f"Received {res_name} from {nas_ip}:{coa_port} in {rtt_ms}ms."
+            }
+        else:
+            return {
+                "status": "ERROR",
+                "response_type": "Invalid Response",
+                "nas_ip": nas_ip,
+                "port": coa_port,
+                "rtt_ms": rtt_ms,
+                "message": "Malformed RADIUS response packet received."
+            }
+    except socket.timeout:
+        return {
+            "status": "TIMEOUT",
+            "response_type": "No Response",
+            "nas_ip": nas_ip,
+            "port": coa_port,
+            "rtt_ms": 3000,
+            "message": f"Timeout waiting for CoA response from {nas_ip}:{coa_port}. Ensure NAS is configured for RADIUS Dynamic Authorization (port {coa_port})."
+        }
+    except Exception as err:
+        return {
+            "status": "ERROR",
+            "response_type": "Socket Error",
+            "nas_ip": nas_ip,
+            "port": coa_port,
+            "rtt_ms": 0,
+            "message": str(err)
+        }
+    finally:
+        sock.close()

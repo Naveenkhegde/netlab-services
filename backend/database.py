@@ -3,7 +3,8 @@ import os
 import hashlib
 
 
-DB_PATH = os.environ.get("NETLAB_DB_PATH", "netlab.db")
+DEFAULT_DB = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "netlab.db"))
+DB_PATH = os.environ.get("NETLAB_DB_PATH", DEFAULT_DB)
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
@@ -42,6 +43,41 @@ def init_db():
     )
     """)
     
+    # Create DHCP ranges/scopes table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS dhcp_ranges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        start_ip TEXT NOT NULL,
+        end_ip TEXT NOT NULL,
+        netmask TEXT NOT NULL DEFAULT '255.255.255.0',
+        gateway TEXT,
+        dns_servers TEXT,
+        domain_name TEXT,
+        lease_time TEXT DEFAULT '12h',
+        interface TEXT,
+        primary_wlc TEXT,
+        secondary_wlc TEXT,
+        tertiary_wlc TEXT,
+        option_43_hex TEXT,
+        ntp_servers TEXT,
+        tftp_server TEXT,
+        custom_options TEXT
+    )
+    """)
+    # Create Network Interfaces configuration table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS interface_configs (
+        ifname TEXT PRIMARY KEY,
+        mode TEXT NOT NULL DEFAULT 'static',
+        ip_address TEXT,
+        netmask TEXT DEFAULT '255.255.255.0',
+        gateway TEXT,
+        dns_servers TEXT,
+        is_up INTEGER DEFAULT 1
+    )
+    """)
+
     # Create RADIUS clients table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS radius_clients (
@@ -77,7 +113,23 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
-        privilege INTEGER NOT NULL DEFAULT 15
+        privilege INTEGER NOT NULL DEFAULT 15,
+        default_action TEXT NOT NULL DEFAULT 'permit'
+    )
+    """)
+    try:
+        cursor.execute("ALTER TABLE tacacs_users ADD COLUMN default_action TEXT NOT NULL DEFAULT 'permit'")
+    except Exception:
+        pass
+    
+    # Create TACACS+ command authorization rules table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tacacs_cmd_rules (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        command TEXT NOT NULL,
+        argument_regex TEXT NOT NULL DEFAULT '.*',
+        action TEXT NOT NULL CHECK(action IN ('permit', 'deny'))
     )
     """)
     
@@ -113,18 +165,35 @@ def init_db():
     )
     """)
     
-    # Create Syslog messages table
+    # Create IPAM Subnets table
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS syslog_messages (
+    CREATE TABLE IF NOT EXISTS ipam_subnets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        severity INTEGER,
-        facility INTEGER,
-        hostname TEXT,
-        message TEXT
+        name TEXT NOT NULL,
+        cidr TEXT NOT NULL UNIQUE,
+        vlan_id INTEGER,
+        vrf TEXT,
+        gateway TEXT,
+        description TEXT
     )
     """)
     
+    # Create IPAM Addresses table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ipam_addresses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subnet_id INTEGER NOT NULL,
+        ip_address TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'available',
+        hostname TEXT,
+        mac_address TEXT,
+        description TEXT,
+        last_seen DATETIME,
+        FOREIGN KEY(subnet_id) REFERENCES ipam_subnets(id) ON DELETE CASCADE,
+        UNIQUE(subnet_id, ip_address)
+    )
+    """)
+
     # Create Auth logs table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS auth_logs (
@@ -171,8 +240,6 @@ def init_db():
         "ldap_base_dn": "dc=netlab,dc=local",
         "ldap_root_dn": "cn=admin,dc=netlab,dc=local",
         "ldap_root_password": "adminpassword",
-        "syslog_enabled": "true",
-        "syslog_port": "514",
         "ntp_enabled": "false",
         "ntp_pools": "pool.ntp.org iburst",
         "tftp_enabled": "false",
@@ -188,6 +255,32 @@ def init_db():
     cursor.execute("INSERT OR IGNORE INTO web_users (username, password_hash, role) VALUES (?, ?, ?)", ("admin", default_hash, "admin"))
     cursor.execute("INSERT OR IGNORE INTO web_users (username, password_hash, role) VALUES (?, ?, ?)", ("viewer", default_hash, "viewer"))
         
+    # Auto-migrate single DHCP settings to dhcp_ranges table if empty
+    cursor.execute("SELECT COUNT(*) FROM dhcp_ranges")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("SELECT key, value FROM settings WHERE key LIKE 'dhcp_%'")
+        s_map = {row['key']: row['value'] for row in cursor.fetchall()}
+        cursor.execute("""
+            INSERT INTO dhcp_ranges (name, start_ip, end_ip, netmask, gateway, dns_servers, lease_time)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            "Default Scope",
+            s_map.get("dhcp_start", "192.168.1.100"),
+            s_map.get("dhcp_end", "192.168.1.200"),
+            s_map.get("dhcp_netmask", "255.255.255.0"),
+            s_map.get("dhcp_gateway", "192.168.1.1"),
+            s_map.get("dhcp_dns_servers", "192.168.1.2"),
+            s_map.get("dhcp_lease_time", "12h")
+        ))
+
+    # Auto-seed default IPAM subnet if empty
+    cursor.execute("SELECT COUNT(*) FROM ipam_subnets")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+            INSERT INTO ipam_subnets (name, cidr, vlan_id, vrf, gateway, description)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, ("Default Management Subnet", "192.168.1.0/24", 1, "default", "192.168.1.1", "Primary Network Lab Management Subnet"))
+
     conn.commit()
     conn.close()
 

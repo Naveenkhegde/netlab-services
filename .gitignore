@@ -21,3 +21,4 @@ backend/netlab.db
 agy.garbage
 *.static
 tmp/
+skel/opt/
