@@ -3,8 +3,8 @@
     "category": "guest",
     "description": "All-in-One central network services VM (IPAM, Multi-Scope DHCP, DNS, RADIUS, TACACS+, LDAP, NTP, TFTP, and FTP) based on Alpine Linux with a modern web control panel UI.",
     "vendor_name": "NetLab",
-    "vendor_url": "https://github.com/netlab-services",
-    "documentation_url": "https://github.com/netlab-services/wiki",
+    "vendor_url": "https://github.com/Naveenkhegde/netlab-services",
+    "documentation_url": "https://github.com/Naveenkhegde/netlab-services",
     "product_name": "NetLab Services Appliance",
     "registry_version": 6,
     "status": "stable",
@@ -28,7 +28,8 @@
             "filename": "netlab-services.qcow2",
             "version": "1.0",
             "md5sum": "c9dc94253865ba3208936de172e9e34f",
-            "filesize": 649854976
+            "filesize": 649854976,
+            "download_url": "https://github.com/Naveenkhegde/netlab-services/releases/download/v1.0/netlab-services.qcow2"
         }
     ],
     "versions": [

@@ -20,7 +20,7 @@ Rather than running multiple VMs or complex configurations, this project provide
 ---
 
 ## Project Output Files
-- `netlab-services.qcow2`: The prebuilt, bootable Alpine Linux QEMU disk image (616MB).
+- `netlab-services.qcow2`: The prebuilt, bootable Alpine Linux QEMU disk image (616MB). [⬇️ Download v1.0 Image](https://github.com/Naveenkhegde/netlab-services/releases/download/v1.0/netlab-services.qcow2)
 - `netlab-services.gns3a`: Official GNS3 appliance template for one-click drag-and-drop integration.
 - `install.sh`: Native bash script to deploy on a clean Debian/Ubuntu VM.
 - `/backend`: FastAPI Python server and SQLite configuration database.
